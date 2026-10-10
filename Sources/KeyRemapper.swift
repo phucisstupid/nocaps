@@ -8,8 +8,8 @@ final class KeyRemapper {
     private var holdTimer: Timer?
     private var behavior = KeyBehavior()
     private let eventSource = CGEventSource(stateID: .privateState)
-    private let marker: Int64 = 0x4E6F_4361_7073
-    private let leftControlFlag = CGEventFlags(rawValue: 1)
+    private static let marker: Int64 = 0x4E6F_4361_7073
+    private static let controlFlags: CGEventFlags = [.maskControl, CGEventFlags(rawValue: 1)]
     private var acceptingInput = false
     private var accessRefreshPending = false
     var onAccessChanged: (() -> Void)?
@@ -96,7 +96,7 @@ final class KeyRemapper {
             refreshAccess()
             return Unmanaged.passUnretained(event)
         }
-        if event.getIntegerValueField(.eventSourceUserData) == marker {
+        if event.getIntegerValueField(.eventSourceUserData) == Self.marker {
             return Unmanaged.passUnretained(event)
         }
         guard acceptingInput, Self.needsHandling(type: type, event: event, capsPressed: behavior.isPressed) else {
@@ -146,10 +146,14 @@ final class KeyRemapper {
             holdTimer = nil
             send(behavior.promote(), flags: flags, proxy: proxy)
         }
-        if behavior.isHoldingControl {
-            event.flags.formUnion([.maskControl, leftControlFlag])
-        }
+        Self.applyControl(to: event, holdingControl: behavior.isHoldingControl)
         return Unmanaged.passUnretained(event)
+    }
+
+    static func applyControl(to event: CGEvent, holdingControl: Bool) {
+        if holdingControl {
+            event.flags.formUnion(controlFlags)
+        }
     }
 
     static func needsHandling(type: CGEventType, event: CGEvent, capsPressed: Bool) -> Bool {
@@ -199,36 +203,50 @@ final class KeyRemapper {
 
     private func send(_ actions: [KeyAction], flags: CGEventFlags, proxy: CGEventTapProxy?) {
         for action in actions {
-            switch action {
-            case .controlDown, .controlUp:
-                var controlFlags = action == .controlUp ? physicalFlags() : flags
-                if action == .controlDown {
-                    controlFlags.formUnion([.maskControl, leftControlFlag])
+            Self.emitEvents(for: action, flags: flags, physicalFlags: physicalFlags, source: eventSource) { event in
+                if let proxy {
+                    event.tapPostEvent(proxy)
+                } else {
+                    event.post(tap: .cgSessionEventTap)
                 }
-                post(
-                    key: CGKeyCode(kVK_Control),
-                    down: action == .controlDown,
-                    flags: controlFlags,
-                    type: .flagsChanged,
-                    proxy: proxy
-                )
-            case .escape:
-                post(key: CGKeyCode(kVK_Escape), down: true, flags: flags, type: .keyDown, proxy: proxy)
-                post(key: CGKeyCode(kVK_Escape), down: false, flags: flags, type: .keyUp, proxy: proxy)
             }
         }
     }
 
-    private func post(key: CGKeyCode, down: Bool, flags: CGEventFlags, type: CGEventType, proxy: CGEventTapProxy?) {
-        guard let event = CGEvent(keyboardEventSource: eventSource, virtualKey: key, keyDown: down) else { return }
+    static func emitEvents(
+        for action: KeyAction, flags: CGEventFlags, physicalFlags: () -> CGEventFlags, source: CGEventSource?,
+        emit: (CGEvent) -> Void
+    ) {
+        switch action {
+        case .controlDown, .controlUp:
+            let down = action == .controlDown
+            emitKeyEvent(
+                source: source,
+                key: CGKeyCode(kVK_Control),
+                down: down,
+                flags: down ? flags.union(controlFlags) : physicalFlags(),
+                type: .flagsChanged,
+                emit: emit
+            )
+        case .escape:
+            emitKeyEvent(
+                source: source, key: CGKeyCode(kVK_Escape), down: true, flags: flags, type: .keyDown, emit: emit
+            )
+            emitKeyEvent(
+                source: source, key: CGKeyCode(kVK_Escape), down: false, flags: flags, type: .keyUp, emit: emit
+            )
+        }
+    }
+
+    private static func emitKeyEvent(
+        source: CGEventSource?, key: CGKeyCode, down: Bool, flags: CGEventFlags, type: CGEventType,
+        emit: (CGEvent) -> Void
+    ) {
+        guard let event = CGEvent(keyboardEventSource: source, virtualKey: key, keyDown: down) else { return }
         event.type = type
         event.flags = flags
         event.setIntegerValueField(.eventSourceUserData, value: marker)
-        if let proxy {
-            event.tapPostEvent(proxy)
-        } else {
-            event.post(tap: .cgSessionEventTap)
-        }
+        emit(event)
     }
 }
 

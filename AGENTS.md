@@ -13,15 +13,16 @@ Use AppKit, Core Graphics, IOKit, and ServiceManagement. Keep it dependency-free
 - `Sources/KeyBehavior.swift`: tap/hold state and timing.
 - `Sources/KeyRemapper.swift`: event tap and synthetic key events.
 - `Sources/KeyboardMapping.swift`: per-keyboard mapping and crash recovery.
-- `Tests/main.swift`: assert-based behavior and mapping checks.
+- `Sources/SessionState.swift`: active user session state across launch and wake.
+- `Tests/`: assert-based behavior, event, session, and mapping recovery checks.
 - `Info.plist`: app identity, minimum macOS, and release version.
-- `scripts/`: build and lint commands.
+- `scripts/`: build, lint, and shared app/menu icon drawing.
 - `Casks/nocaps.rb`: Homebrew installation from GitHub release assets.
 
 ## Commands
 
 ```sh
-xcrun swift-format format --in-place --recursive Sources Tests
+xcrun swift-format format --in-place --recursive Sources Tests scripts/render-icons.swift
 bash scripts/lint.sh
 bash scripts/build.sh
 ```
@@ -50,7 +51,7 @@ the menu. Never report these hardware checks as passed without doing them.
 ## Release
 
 GitHub Actions builds the tagged release for both Apple silicon and Intel,
-checks formatting/lint/tests, and publishes `NoCaps.zip`. For v1.0, keep the
+checks formatting/lint/tests, and publishes `NoCaps.zip`. Keep the
 app version, Git tag, release asset URL, and Homebrew cask version consistent.
 Use the actual release archive's SHA-256 in the cask. Do not claim Apple
 notarization unless the workflow signs and notarizes with configured credentials.

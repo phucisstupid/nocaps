@@ -6,6 +6,12 @@ import IOKit.hidsystem
 final class KeyboardMapping {
     typealias Entry = [String: UInt64]
 
+    struct Keyboard {
+        let id: String
+        let readMappings: () throws -> [Entry]
+        let writeMappings: ([Entry]) throws -> Void
+    }
+
     static let capsUsage: UInt64 = 0x7_0000_0039
     static let reservedUsage: UInt64 = 0x7_0000_006F
     static let sourceKey = "HIDKeyboardModifierMappingSrc"
@@ -24,15 +30,23 @@ final class KeyboardMapping {
         }
     }
 
-    private let client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
+    private lazy var client = IOHIDEventSystemClientCreateSimpleClient(kCFAllocatorDefault)
     private var manager: IOHIDManager?
-    private var cachedKeyboards: [(String, IOHIDServiceClient)] = []
+    private var cachedKeyboards: [Keyboard] = []
     private var keyboardChangePending = false
     private var keyboardChangeGeneration = 0
     var onKeyboardsChanged: ((Bool) -> Void)?
-    private let propertyKey = "UserKeyMapping" as CFString
-    private let journalURL = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-        .appendingPathComponent("NoCaps/keyboard-mapping.plist")
+    private static let propertyKey = "UserKeyMapping" as CFString
+    private let journalURL: URL
+    private let listKeyboards: (() throws -> [Keyboard])?
+
+    init(journalURL: URL? = nil, keyboards: (() throws -> [Keyboard])? = nil) {
+        self.journalURL =
+            journalURL
+            ?? FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+            .appendingPathComponent("NoCaps/keyboard-mapping.plist")
+        listKeyboards = keyboards
+    }
 
     deinit {
         if let manager {
@@ -108,23 +122,23 @@ final class KeyboardMapping {
     }
 
     func verify() throws {
-        for (_, service) in cachedKeyboards {
-            try Self.verify(in: mappings(for: service))
+        for keyboard in cachedKeyboards {
+            try Self.verify(in: keyboard.readMappings())
         }
     }
 
     func apply() throws -> Int {
         var journal = try loadJournal()
         let keyboards = try keyboards()
-        for (id, service) in keyboards {
-            let current = try mappings(for: service)
-            if journal.originalCaps[id] != nil {
+        for keyboard in keyboards {
+            let current = try keyboard.readMappings()
+            if journal.originalCaps[keyboard.id] != nil {
                 try Self.verify(in: current)
             } else {
                 let updated = try Self.installing(in: current)
-                journal.originalCaps[id] = current.filter { $0[Self.sourceKey] == Self.capsUsage }
+                journal.originalCaps[keyboard.id] = current.filter { $0[Self.sourceKey] == Self.capsUsage }
                 try saveJournal(journal)
-                try setMappings(updated, for: service)
+                try keyboard.writeMappings(updated)
             }
         }
         cachedKeyboards = keyboards
@@ -139,15 +153,15 @@ final class KeyboardMapping {
             return
         }
         var firstError: Error?
-        for (id, service) in try keyboards() {
-            guard let original = journal.originalCaps[id] else { continue }
+        for keyboard in try keyboards() {
+            guard let original = journal.originalCaps[keyboard.id] else { continue }
             do {
-                let current = try mappings(for: service)
+                let current = try keyboard.readMappings()
                 let restored = try Self.restoring(in: current, originalCaps: original)
                 if restored != current {
-                    try setMappings(restored, for: service)
+                    try keyboard.writeMappings(restored)
                 }
-                journal.originalCaps.removeValue(forKey: id)
+                journal.originalCaps.removeValue(forKey: keyboard.id)
                 try saveJournal(journal)
             } catch {
                 if firstError == nil {
@@ -168,7 +182,8 @@ final class KeyboardMapping {
         }
     }
 
-    private func keyboards() throws -> [(String, IOHIDServiceClient)] {
+    private func keyboards() throws -> [Keyboard] {
+        if let listKeyboards { return try listKeyboards() }
         guard let services = IOHIDEventSystemClientCopyServices(client) as? [IOHIDServiceClient] else {
             throw MappingError(
                 message: "macOS did not provide access to keyboard services. Check NoCaps' permissions and reopen it."
@@ -178,11 +193,15 @@ final class KeyboardMapping {
             guard let id = IOHIDServiceClientGetRegistryID(service) as? NSNumber else {
                 throw MappingError(message: "macOS returned an invalid keyboard identifier. NoCaps left it unchanged.")
             }
-            return (id.stringValue, service)
+            return Keyboard(
+                id: id.stringValue,
+                readMappings: { try Self.mappings(for: service) },
+                writeMappings: { try Self.setMappings($0, for: service) }
+            )
         }
     }
 
-    private func mappings(for service: IOHIDServiceClient) throws -> [Entry] {
+    private static func mappings(for service: IOHIDServiceClient) throws -> [Entry] {
         guard let property = IOHIDServiceClientCopyProperty(service, propertyKey) else { return [] }
         do {
             let data = try PropertyListSerialization.data(fromPropertyList: property, format: .binary, options: 0)
@@ -196,14 +215,14 @@ final class KeyboardMapping {
         }
     }
 
-    private func setMappings(_ mappings: [Entry], for service: IOHIDServiceClient) throws {
+    private static func setMappings(_ mappings: [Entry], for service: IOHIDServiceClient) throws {
         guard IOHIDServiceClientSetProperty(service, propertyKey, mappings as CFArray) else {
             throw MappingError(
                 message:
                     "macOS refused to update Caps Lock. NoCaps kept its recovery file; reopen it to restore the key."
             )
         }
-        guard try self.mappings(for: service) == mappings else {
+        guard try Self.mappings(for: service) == mappings else {
             throw MappingError(
                 message:
                     "The Caps Lock mapping could not be verified. NoCaps kept its recovery file; reopen it to restore the key."

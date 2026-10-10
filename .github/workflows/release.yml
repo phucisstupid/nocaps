@@ -64,6 +64,13 @@ jobs:
 
           A native menu bar app for macOS 13 or later, with Launch at Login. The universal build supports Apple Silicon and Intel Macs.
 
+          Changes in this release:
+
+          - Fix remapping at startup and wake when the user session is inactive.
+          - Add matching code-drawn app and monochrome menu bar icons.
+          - Show the version next to NoCaps in the menu and hover text.
+          - Add regression checks for mapping recovery and physical Control flags.
+
           Download NoCaps.zip, move NoCaps.app to Applications, and open it. Grant keyboard access when prompted.
 
           This release is ad hoc signed and not notarized. macOS may require approval in System Settings → Privacy & Security before the first launch. Keyboard permission may need to be granted again after an update.

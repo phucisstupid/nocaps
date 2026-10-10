@@ -5,6 +5,7 @@ import ServiceManagement
 
 final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private let remapper = KeyRemapper()
+    private let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
     private var statusItem: NSStatusItem!
     private var status = "Starting…"
     private let toggle = NSMenuItem(title: "Enable NoCaps", action: #selector(toggleEnabled), keyEquivalent: "")
@@ -20,7 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     )
     private let details = NSMenuItem(title: "Show Error…", action: #selector(showLastError), keyEquivalent: "")
     private var timer: Timer?
-    private var sessionActive = true
+    private var session = SessionState()
     private var trusted = false
     private var secureInput = false
     private var cleanupPending = false
@@ -30,11 +31,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     func applicationDidFinishLaunching(_: Notification) {
         statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.squareLength)
-        statusItem.button?.image = NSImage(systemSymbolName: "capslock", accessibilityDescription: "NoCaps")
-        statusItem.button?.toolTip = "NoCaps"
+        let icon = Bundle.main.url(forResource: "NoCapsMenu", withExtension: "pdf").flatMap(NSImage.init(contentsOf:))
+        icon?.isTemplate = true
+        icon?.accessibilityDescription = "NoCaps \(version)"
+        statusItem.button?.image = icon
+        statusItem.button?.toolTip = "NoCaps \(version)"
         let menu = NSMenu()
         menu.delegate = self
-        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
         menu.addItem(NSMenuItem(title: "NoCaps \(version)", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
         toggle.target = self
@@ -53,6 +56,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         quit.target = self
         menu.addItem(quit)
         statusItem.menu = menu
+        let center = NSWorkspace.shared.notificationCenter
+        for name in [NSWorkspace.willSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
+            center.addObserver(self, selector: #selector(suspend), name: name, object: nil)
+        }
+        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
+            center.addObserver(self, selector: #selector(resume), name: name, object: nil)
+        }
+        session.resume()
         remapper.onAccessChanged = { [weak self] in self?.refresh(keyboardsChanged: true) }
         remapper.monitorKeyboards { [weak self] in self?.refresh(keyboardsChanged: true) }
 
@@ -60,13 +71,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             enabled = false
             lastError = error.localizedDescription
             cleanupPending = true
-        }
-        let center = NSWorkspace.shared.notificationCenter
-        for name in [NSWorkspace.willSleepNotification, NSWorkspace.sessionDidResignActiveNotification] {
-            center.addObserver(self, selector: #selector(suspend), name: name, object: nil)
-        }
-        for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
-            center.addObserver(self, selector: #selector(resume), name: name, object: nil)
         }
         trusted = CGPreflightPostEventAccess()
         if !trusted {
@@ -87,7 +91,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 try remapper.stop()
                 cleanupPending = false
             }
-            if enabled, trusted, !secureInput, sessionActive {
+            if enabled, trusted, !secureInput, session.isActive {
                 if !remapper.isRunning || keyboardsChanged {
                     keyboardCount = try remapper.start()
                 }
@@ -137,7 +141,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateSafetyTimer() {
-        guard sessionActive, cleanupPending || (enabled && trusted) else {
+        guard session.isActive, cleanupPending || (enabled && trusted) else {
             timer?.invalidate()
             timer = nil
             return
@@ -167,7 +171,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         permissions.isHidden = trusted
         details.isHidden = lastError == nil
         statusItem.button?.appearsDisabled = status != "Active"
-        statusItem.button?.toolTip = lastError ?? "NoCaps — \(status.lowercased())"
+        statusItem.button?.toolTip = lastError ?? "NoCaps \(version) — \(status.lowercased())"
     }
 
     private func updateLoginItem() {
@@ -242,12 +246,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func suspend() {
-        sessionActive = false
+        session.suspend()
         refresh()
     }
 
     @objc private func resume() {
-        sessionActive = true
+        session.resume()
         refresh()
     }
 

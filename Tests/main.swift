@@ -1,6 +1,8 @@
 import AppKit
 import Carbon
 
+checkSessionState()
+
 var key = KeyBehavior()
 assert(!key.isPressed && !key.isHoldingControl)
 assert(key.release(at: 0) == [])
@@ -161,3 +163,6 @@ for conflicting in [
     } catch {}
 }
 print("Idle keyboard filtering and active mapping-conflict checks passed")
+
+try checkKeyboardMappingRecovery()
+runKeyRemapperChecks()

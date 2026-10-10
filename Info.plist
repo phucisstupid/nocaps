@@ -6,9 +6,10 @@
     <key>CFBundleIdentifier</key><string>app.nocaps.NoCaps</string>
     <key>CFBundleName</key><string>NoCaps</string>
     <key>CFBundleDisplayName</key><string>NoCaps</string>
+    <key>CFBundleIconFile</key><string>NoCaps.icns</string>
     <key>CFBundlePackageType</key><string>APPL</string>
-    <key>CFBundleShortVersionString</key><string>1.0</string>
-    <key>CFBundleVersion</key><string>7</string>
+    <key>CFBundleShortVersionString</key><string>1.5</string>
+    <key>CFBundleVersion</key><string>8</string>
     <key>LSMinimumSystemVersion</key><string>13.0</string>
     <key>LSUIElement</key><true/>
     <key>NSHighResolutionCapable</key><true/>
