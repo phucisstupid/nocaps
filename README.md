@@ -22,7 +22,7 @@ brew install --cask phucisstupid/nocaps/nocaps
 
 Release builds are not notarized, so macOS may require approval before opening.
 
-## Use
+## Usage
 
 Open NoCaps and allow keyboard access in **System Settings → Privacy & Security
 → Accessibility** (**Device Control and Data Access** on newer macOS).
