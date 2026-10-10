@@ -1,6 +1,6 @@
 cask "nocaps" do
-  version "1.0"
-  sha256 "d8a3baa631042d917055c7d877673d916a1e8e342f857c6d30fddb0586449f79"
+  version "1.5"
+  sha256 "ac08a9024a1b881f75881948a3a7829f5e34636402c543c22f103c07d283553b"
 
   url "https://github.com/phucisstupid/nocaps/releases/download/v#{version}/NoCaps.zip"
   name "NoCaps"
