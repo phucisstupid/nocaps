@@ -7,7 +7,7 @@ cask "nocaps" do
   desc "Tap Caps Lock for Escape, hold it for Control"
   homepage "https://github.com/phucisstupid/nocaps"
 
-  depends_on macos: ">= :ventura"
+  depends_on macos: :ventura
 
   app "NoCaps.app"
 
