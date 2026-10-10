@@ -1,3 +1,5 @@
+<img src="docs/icon.png" alt="NoCaps app icon" width="128" height="128">
+
 # NoCaps
 
 Give Caps Lock a useful job: **tap for Escape, hold for Control**.
