@@ -34,7 +34,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         statusItem.button?.toolTip = "NoCaps"
         let menu = NSMenu()
         menu.delegate = self
-        menu.addItem(NSMenuItem(title: "NoCaps", action: nil, keyEquivalent: ""))
+        let version = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"
+        menu.addItem(NSMenuItem(title: "NoCaps \(version)", action: nil, keyEquivalent: ""))
         menu.addItem(.separator())
         toggle.target = self
         menu.addItem(toggle)
