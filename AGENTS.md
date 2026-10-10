@@ -50,6 +50,15 @@ the menu. Never report these hardware checks as passed without doing them.
 
 ## Release
 
+Release notes contain only a bullet list of changes in that release. Omit
+headings, app descriptions, installation instructions, compatibility details,
+and signing or permission boilerplate. For v1.5, use exactly:
+
+- Fix remapping at startup and wake when the user session is inactive.
+- Add matching code-drawn app and monochrome menu bar icons.
+- Show the version next to NoCaps in the menu and hover text.
+- Add regression checks for mapping recovery and physical Control flags.
+
 GitHub Actions builds the tagged release for both Apple silicon and Intel,
 checks formatting/lint/tests, and publishes `NoCaps.zip`. Keep the
 app version, Git tag, release asset URL, and Homebrew cask version consistent.
