@@ -60,10 +60,10 @@ jobs:
           cd build
           sha256sum --check NoCaps.zip.sha256
           cat > release-notes.md <<'NOTES'
-          - Fix remapping at startup and wake when the user session is inactive.
-          - Add matching code-drawn app and monochrome menu bar icons.
-          - Show the version next to NoCaps in the menu and hover text.
-          - Add regression checks for mapping recovery and physical Control flags.
+          - Recognize keyboard access after leaving System Settings without restarting NoCaps.
+          - Retry permission checks after quick app switches.
+          - Add regression checks for Control cleanup and recovery after partial keyboard remapping.
+          - Clarify permission setup instructions.
           NOTES
           gh release create "$RELEASE_TAG" NoCaps.zip NoCaps.zip.sha256 \
             --verify-tag --title "NoCaps $RELEASE_TAG" --notes-file release-notes.md

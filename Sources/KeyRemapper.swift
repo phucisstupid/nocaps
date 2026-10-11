@@ -2,17 +2,27 @@ import AppKit
 import Carbon
 
 final class KeyRemapper {
-    private let mapping = KeyboardMapping()
+    private let mapping: KeyboardMapping
     private var tap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var holdTimer: Timer?
-    private var behavior = KeyBehavior()
+    private var behavior: KeyBehavior
+    private let eventCollector: ((KeyAction, CGEvent) -> Void)?
     private let eventSource = CGEventSource(stateID: .privateState)
     private static let marker: Int64 = 0x4E6F_4361_7073
     private static let controlFlags: CGEventFlags = [.maskControl, CGEventFlags(rawValue: 1)]
     private var acceptingInput = false
     private var accessRefreshPending = false
     var onAccessChanged: (() -> Void)?
+
+    init(
+        mapping: KeyboardMapping = KeyboardMapping(), behavior: KeyBehavior = KeyBehavior(),
+        eventCollector: ((KeyAction, CGEvent) -> Void)? = nil
+    ) {
+        self.mapping = mapping
+        self.behavior = behavior
+        self.eventCollector = eventCollector
+    }
 
     var isRunning: Bool {
         tap != nil
@@ -87,7 +97,7 @@ final class KeyRemapper {
         runLoopSource = nil
     }
 
-    private func handle(proxy: CGEventTapProxy, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
+    func handle(proxy: CGEventTapProxy?, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
             cancelPress()
             if acceptingInput, let tap, CGPreflightPostEventAccess(), !IsSecureEventInputEnabled() {
@@ -204,7 +214,9 @@ final class KeyRemapper {
     private func send(_ actions: [KeyAction], flags: CGEventFlags, proxy: CGEventTapProxy?) {
         for action in actions {
             Self.emitEvents(for: action, flags: flags, physicalFlags: physicalFlags, source: eventSource) { event in
-                if let proxy {
+                if let eventCollector {
+                    eventCollector(action, event)
+                } else if let proxy {
                     event.tapPostEvent(proxy)
                 } else {
                     event.post(tap: .cgSessionEventTap)

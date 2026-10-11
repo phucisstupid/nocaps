@@ -78,4 +78,100 @@ func runKeyRemapperChecks() {
         assert(event.getIntegerValueField(.eventSourceUserData) == marker)
     }
     print("Control flag preservation and in-memory synthetic events passed")
+    do {
+        try checkControlCleanup()
+    } catch {
+        fatalError("Control cleanup check failed: \(error)")
+    }
+}
+
+private struct SimulatedRestoreFailure: Error {}
+
+private func checkControlCleanup() throws {
+    let files = FileManager.default
+    let directory = files.temporaryDirectory.appendingPathComponent("nocaps-control-cleanup-\(UUID().uuidString)")
+    try files.createDirectory(at: directory, withIntermediateDirectories: true)
+    defer { try? files.removeItem(at: directory) }
+    var held = KeyBehavior()
+    _ = held.press(at: 0)
+    assert(held.promote() == [.controlDown])
+    let caps: KeyboardMapping.Entry = [
+        KeyboardMapping.sourceKey: KeyboardMapping.capsUsage,
+        KeyboardMapping.destinationKey: 0x7_0000_0004,
+    ]
+
+    func checkRelease(_ action: KeyAction, _ event: CGEvent) {
+        assert(action == .controlUp)
+        assert(event.type == .flagsChanged)
+        assert(event.getIntegerValueField(.keyboardEventKeycode) == Int64(kVK_Control))
+    }
+
+    for failRestore in [false, true] {
+        let journalURL = directory.appendingPathComponent("restore-\(failRestore).plist")
+        var actions: [KeyAction] = []
+        var current = [caps]
+        var restoring = false
+        var readFailure = failRestore
+        let keyboard = KeyboardMapping.Keyboard(
+            id: "test",
+            readMappings: {
+                if restoring {
+                    assert(actions == [.controlUp])
+                    if readFailure { throw SimulatedRestoreFailure() }
+                }
+                return current
+            },
+            writeMappings: {
+                if restoring { assert(actions == [.controlUp]) }
+                current = $0
+            }
+        )
+        let mapping = KeyboardMapping(journalURL: journalURL, keyboards: { [keyboard] })
+        _ = try mapping.apply()
+        let remapper = KeyRemapper(
+            mapping: mapping, behavior: held,
+            eventCollector: {
+                checkRelease($0, $1)
+                actions.append($0)
+            }
+        )
+        restoring = true
+        if failRestore {
+            do {
+                try remapper.stop()
+                assertionFailure("Expected restoration to fail after Control was released")
+            } catch is SimulatedRestoreFailure {}
+            assert(files.fileExists(atPath: journalURL.path))
+        } else {
+            try remapper.stop()
+        }
+        assert(actions == [.controlUp])
+        readFailure = false
+        try remapper.stop()
+        assert(actions == [.controlUp])
+        assert(current == [caps])
+        assert(!files.fileExists(atPath: journalURL.path))
+    }
+
+    for type in [CGEventType.tapDisabledByTimeout, .tapDisabledByUserInput] {
+        var actions: [KeyAction] = []
+        let mapping = KeyboardMapping(journalURL: directory.appendingPathComponent("disabled.plist"), keyboards: { [] })
+        let remapper = KeyRemapper(
+            mapping: mapping, behavior: held,
+            eventCollector: {
+                checkRelease($0, $1)
+                actions.append($0)
+            }
+        )
+        guard let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_F20), keyDown: true) else {
+            fatalError("Could not create an in-memory tap-disabled event")
+        }
+        let returned = remapper.handle(proxy: nil, type: type, event: event)
+        assert(returned?.takeUnretainedValue() === event)
+        assert(actions == [.controlUp])
+        _ = remapper.handle(proxy: nil, type: type, event: event)
+        try remapper.stop()
+        assert(actions == [.controlUp])
+    }
+    print("Control cleanup: stop before restore, failed restore, and both tap-disabled paths passed")
 }

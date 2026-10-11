@@ -32,6 +32,7 @@ func checkKeyboardMappingRecovery() throws {
     var current = ["first": [caps, unrelated], "second": [unrelated]]
     var writes: [String] = []
     var failFirstRestore = false
+    var failSecondInstallAfterChange: Bool?
     let keyboards = ["first", "second"].map { id in
         KeyboardMapping.Keyboard(
             id: id,
@@ -43,7 +44,9 @@ func checkKeyboardMappingRecovery() throws {
                 assert(journal.originalCaps[id] == (id == "first" ? [caps] : []))
                 writes.append(id)
                 if failFirstRestore && id == "first" { throw SimulatedMappingFailure() }
+                if id == "second", failSecondInstallAfterChange == false { throw SimulatedMappingFailure() }
                 current[id] = updated
+                if id == "second", failSecondInstallAfterChange == true { throw SimulatedMappingFailure() }
             }
         )
     }
@@ -78,6 +81,24 @@ func checkKeyboardMappingRecovery() throws {
     try recovery.restore()
     assert(writes.count == 5)
 
+    // The second install can fail before or after changing its property; the first must still recover.
+    for failAfterChange in [false, true] {
+        current = ["first": [caps, unrelated], "second": [unrelated]]
+        failSecondInstallAfterChange = failAfterChange
+        let partial = KeyboardMapping(journalURL: journalURL, keyboards: { keyboards })
+        expectRecoveryFailure { _ = try partial.apply() }
+        assert(current["first"] == [unrelated, owned])
+        assert(current["second"] == (failAfterChange ? [unrelated, owned] : [unrelated]))
+        let partialJournal = try readMappingJournal(journalURL)
+        assert(partialJournal.originalCaps == ["first": [caps], "second": []])
+
+        failSecondInstallAfterChange = nil
+        let partialRecovery = KeyboardMapping(journalURL: journalURL, keyboards: { keyboards })
+        try partialRecovery.restore()
+        assert(current == ["first": [unrelated, caps], "second": [unrelated]])
+        assert(!files.fileExists(atPath: journalURL.path))
+    }
+
     // A file where the recovery directory belongs makes persistence fail deterministically.
     let blockedDirectory = directory.appendingPathComponent("blocked")
     try Data("not a directory".utf8).write(to: blockedDirectory)
@@ -100,5 +121,7 @@ func checkKeyboardMappingRecovery() throws {
     )
     expectRecoveryFailure { _ = try blocked.apply() }
     assert(blockedWrites == 0 && blockedMappings == [caps, unrelated])
-    print("Keyboard recovery: write-ahead journal, persistence failure, and failed-restore retry passed")
+    print(
+        "Keyboard recovery: write-ahead journal, partial installs, persistence failure, and failed-restore retry passed"
+    )
 }
