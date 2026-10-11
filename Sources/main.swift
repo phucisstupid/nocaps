@@ -21,6 +21,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     )
     private let details = NSMenuItem(title: "Show Error…", action: #selector(showLastError), keyEquivalent: "")
     private var timer: Timer?
+    private var permissionObservers: [NSObjectProtocol] = []
     private var session = SessionState()
     private var trusted = false
     private var secureInput = false
@@ -63,6 +64,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
             center.addObserver(self, selector: #selector(resume), name: name, object: nil)
         }
+        permissionObservers = observePermissionChanges(
+            needsRefresh: { [weak self] in
+                guard let self else { return false }
+                return !trusted && session.isActive
+            },
+            refresh: { [weak self] in self?.refresh() }
+        )
         session.resume()
         remapper.onAccessChanged = { [weak self] in self?.refresh(keyboardsChanged: true) }
         remapper.monitorKeyboards { [weak self] in self?.refresh(keyboardsChanged: true) }

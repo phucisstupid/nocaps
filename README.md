@@ -26,7 +26,8 @@ Release builds are not notarized, so macOS may require approval before opening.
 
 Open NoCaps and allow keyboard access in **System Settings → Privacy & Security
 → Accessibility** (**Device Control and Data Access** on newer macOS).
-Turn Caps Lock off if its light is on, then open NoCaps's menu after granting access.
+Turn Caps Lock off if its light is on. After granting access, leave System Settings
+to enable NoCaps.
 
 Use the menu to pause NoCaps or enable **Launch at Login**. Quit to restore Caps Lock.
 If NoCaps crashes, reopen it to restore the key.

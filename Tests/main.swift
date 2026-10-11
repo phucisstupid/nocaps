@@ -2,6 +2,7 @@ import AppKit
 import Carbon
 
 checkSessionState()
+checkPermissionRefresh()
 
 var key = KeyBehavior()
 assert(!key.isPressed && !key.isHoldingControl)
