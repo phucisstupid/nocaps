@@ -2,7 +2,7 @@
 
 # NoCaps
 
-Give Caps Lock a useful job: **tap for Escape, hold for Control**.
+A super lightweight app that does one job: make Caps Lock **tap for Escape, hold for Control**.
 
 NoCaps lives in your menu bar and works on macOS 13 or later, on Apple silicon
 and Intel Macs.
