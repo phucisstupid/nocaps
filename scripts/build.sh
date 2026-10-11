@@ -10,7 +10,7 @@ if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--universal" ) ]]; then
 fi
 if [[ "${1:-}" == "--universal" ]]; then architectures=(arm64 x86_64); fi
 compiler=(xcrun swiftc -swift-version 5 -module-cache-path .build/ModuleCache)
-"${compiler[@]}" -target "${architecture}-apple-macosx13.0" Sources/KeyBehavior.swift Sources/KeyboardMapping.swift Sources/KeyRemapper.swift Sources/SessionState.swift Sources/PermissionRefresh.swift Tests/*.swift -o .build/NoCapsChecks
+"${compiler[@]}" -target "${architecture}-apple-macosx13.0" Sources/KeyBehavior.swift Sources/KeyboardMapping.swift Sources/KeyRemapper.swift Sources/SessionState.swift Sources/PermissionRefresh.swift Sources/AppRestart.swift Tests/*.swift -o .build/NoCapsChecks
 .build/NoCapsChecks
 # Cloud providers add bundle metadata that breaks signing; build the app locally.
 staging_dir="$(mktemp -d "${TMPDIR:-/tmp}/nocaps.XXXXXX")"

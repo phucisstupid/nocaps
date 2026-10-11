@@ -1,6 +1,25 @@
 import AppKit
 
 func checkPermissionRefresh() {
+    var access = PermissionAccess(isGranted: false)
+    assert(!access.isGranted && !access.needsRestart)
+    access.update(false)
+    assert(!access.isGranted && !access.needsRestart)
+    access.update(true)
+    assert(access.isGranted && access.needsRestart)
+    access.update(true)
+    assert(access.isGranted && access.needsRestart)
+    access.update(false)
+    assert(!access.isGranted && access.needsRestart)
+    access.update(true)
+    assert(access.isGranted && access.needsRestart)
+    access = PermissionAccess(isGranted: true)
+    assert(access.isGranted && !access.needsRestart)
+    access.update(false)
+    assert(!access.isGranted && !access.needsRestart)
+    access.update(true)
+    assert(access.isGranted && access.needsRestart)
+
     let center = NotificationCenter()
     var granted = false
     var trusted = false
@@ -75,5 +94,5 @@ func checkPermissionRefresh() {
     retries.removeFirst().work()
     assert(checks == 9 && retries.isEmpty)
 
-    print("Permission refresh: app switching, Settings quit, delayed grants, and bounded retries passed")
+    print("Permission refresh: restart state, app switching, Settings quit, delayed grants, and bounded retries passed")
 }

@@ -1,5 +1,17 @@
 import AppKit
 
+struct PermissionAccess {
+    private(set) var isGranted: Bool
+    private(set) var needsRestart = false
+
+    mutating func update(_ granted: Bool) {
+        if granted && !isGranted {
+            needsRestart = true
+        }
+        isGranted = granted
+    }
+}
+
 func observePermissionChanges(
     center: NotificationCenter = NSWorkspace.shared.notificationCenter,
     bundleIdentifier: @escaping (Notification) -> String? = {

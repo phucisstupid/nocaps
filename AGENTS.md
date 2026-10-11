@@ -15,6 +15,7 @@ Use AppKit, Core Graphics, IOKit, and ServiceManagement. Keep it dependency-free
 - `Sources/KeyboardMapping.swift`: per-keyboard mapping and crash recovery.
 - `Sources/SessionState.swift`: active user session state across launch and wake.
 - `Sources/PermissionRefresh.swift`: permission refresh after leaving System Settings.
+- `Sources/AppRestart.swift`: relaunch after graceful exit.
 - `Tests/`: assert-based behavior, event, session, and mapping recovery checks.
 - `Info.plist`: app identity, minimum macOS, and release version.
 - `scripts/`: build, lint, and shared app/menu icon drawing.

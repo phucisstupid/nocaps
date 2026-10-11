@@ -60,10 +60,8 @@ jobs:
           cd build
           sha256sum --check NoCaps.zip.sha256
           cat > release-notes.md <<'NOTES'
-          - Recognize keyboard access after leaving System Settings without restarting NoCaps.
-          - Retry permission checks after quick app switches.
-          - Add regression checks for Control cleanup and recovery after partial keyboard remapping.
-          - Clarify permission setup instructions.
+          - Show a Restart NoCaps prompt after keyboard access is granted.
+          - Add a menu action to restart NoCaps later.
           NOTES
           gh release create "$RELEASE_TAG" NoCaps.zip NoCaps.zip.sha256 \
             --verify-tag --title "NoCaps $RELEASE_TAG" --notes-file release-notes.md
