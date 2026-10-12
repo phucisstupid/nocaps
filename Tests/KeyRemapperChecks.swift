@@ -155,6 +155,7 @@ private func checkControlCleanup() throws {
 
     for type in [CGEventType.tapDisabledByTimeout, .tapDisabledByUserInput] {
         var actions: [KeyAction] = []
+        var refreshes = 0
         let mapping = KeyboardMapping(journalURL: directory.appendingPathComponent("disabled.plist"), keyboards: { [] })
         let remapper = KeyRemapper(
             mapping: mapping, behavior: held,
@@ -163,6 +164,7 @@ private func checkControlCleanup() throws {
                 actions.append($0)
             }
         )
+        remapper.onAccessChanged = { refreshes += 1 }
         guard let event = CGEvent(keyboardEventSource: nil, virtualKey: CGKeyCode(kVK_F20), keyDown: true) else {
             fatalError("Could not create an in-memory tap-disabled event")
         }
@@ -170,6 +172,8 @@ private func checkControlCleanup() throws {
         assert(returned?.takeUnretainedValue() === event)
         assert(actions == [.controlUp])
         _ = remapper.handle(proxy: nil, type: type, event: event)
+        RunLoop.main.run(until: Date(timeIntervalSinceNow: 0.02))
+        assert(refreshes == 1)
         try remapper.stop()
         assert(actions == [.controlUp])
     }

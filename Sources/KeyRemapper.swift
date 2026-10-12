@@ -43,6 +43,10 @@ final class KeyRemapper {
     }
 
     func verifyMapping() throws {
+        if acceptingInput, let tap, !CGEvent.tapIsEnabled(tap: tap) {
+            suspendInput()
+            return
+        }
         try mapping.verify()
     }
 
@@ -99,11 +103,7 @@ final class KeyRemapper {
 
     func handle(proxy: CGEventTapProxy?, type: CGEventType, event: CGEvent) -> Unmanaged<CGEvent>? {
         if type == .tapDisabledByTimeout || type == .tapDisabledByUserInput {
-            cancelPress()
-            if acceptingInput, let tap, CGPreflightPostEventAccess(), !IsSecureEventInputEnabled() {
-                CGEvent.tapEnable(tap: tap, enable: true)
-            }
-            refreshAccess()
+            suspendInput()
             return Unmanaged.passUnretained(event)
         }
         if event.getIntegerValueField(.eventSourceUserData) == Self.marker {
@@ -112,10 +112,8 @@ final class KeyRemapper {
         guard acceptingInput, Self.needsHandling(type: type, event: event, capsPressed: behavior.isPressed) else {
             return Unmanaged.passUnretained(event)
         }
-        if IsSecureEventInputEnabled() || !CGPreflightPostEventAccess() {
-            acceptingInput = false
-            cancelPress()
-            refreshAccess()
+        if IsSecureEventInputEnabled() {
+            suspendInput()
             return Unmanaged.passUnretained(event)
         }
 
@@ -130,10 +128,8 @@ final class KeyRemapper {
                     send(behavior.press(at: time), flags: flags, proxy: proxy)
                     let timer = Timer(timeInterval: KeyBehavior.holdDelay, repeats: false) { [weak self] _ in
                         guard let self, acceptingInput else { return }
-                        guard !IsSecureEventInputEnabled(), CGPreflightPostEventAccess() else {
-                            acceptingInput = false
-                            cancelPress()
-                            refreshAccess()
+                        guard !IsSecureEventInputEnabled() else {
+                            suspendInput()
                             return
                         }
                         send(behavior.promote(), flags: physicalFlags(), proxy: nil)
@@ -170,6 +166,12 @@ final class KeyRemapper {
         capsPressed
             || ((type == .keyDown || type == .keyUp)
                 && event.getIntegerValueField(.keyboardEventKeycode) == Int64(kVK_F20))
+    }
+
+    private func suspendInput() {
+        acceptingInput = false
+        cancelPress()
+        refreshAccess()
     }
 
     private func refreshAccess() {

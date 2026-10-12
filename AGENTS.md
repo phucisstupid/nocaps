@@ -14,8 +14,6 @@ Use AppKit, Core Graphics, IOKit, and ServiceManagement. Keep it dependency-free
 - `Sources/KeyRemapper.swift`: event tap and synthetic key events.
 - `Sources/KeyboardMapping.swift`: per-keyboard mapping and crash recovery.
 - `Sources/SessionState.swift`: active user session state across launch and wake.
-- `Sources/PermissionRefresh.swift`: permission refresh after leaving System Settings.
-- `Sources/AppRestart.swift`: relaunch after graceful exit.
 - `Tests/`: assert-based behavior, event, session, and mapping recovery checks.
 - `Info.plist`: app identity, minimum macOS, and release version.
 - `scripts/`: build, lint, and shared app/menu icon drawing.
@@ -47,7 +45,7 @@ the menu. Never report these hardware checks as passed without doing them.
 - Release synthetic Control and restore Caps Lock on pause, quit, sleep, inactive
   sessions, and Secure Input. Retain recovery state when restoration fails.
 - Recover mappings after a crash. F20 is reserved while NoCaps is active.
-- Do not log keystrokes or add network requests. About opens the GitHub page.
+- Do not log keystrokes or add network requests.
 - Quit the running app before replacing it; keep its bundle identifier stable.
 
 ## Release

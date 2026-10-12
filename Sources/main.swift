@@ -21,12 +21,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     )
     private let details = NSMenuItem(title: "Show Error…", action: #selector(showLastError), keyEquivalent: "")
     private var timer: Timer?
-    private var permissionObservers: [NSObjectProtocol] = []
     private var session = SessionState()
-    private var access = PermissionAccess(isGranted: false)
-    private var trusted: Bool { access.isGranted }
-    private var restartPromptShown = false
-    private var restartRequested = false
+    private var trusted = false
     private var secureInput = false
     private var cleanupPending = false
     private var keyboardCount = 0
@@ -53,9 +49,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         details.target = self
         menu.addItem(details)
         menu.addItem(.separator())
-        let about = NSMenuItem(title: "About NoCaps", action: #selector(openAbout), keyEquivalent: "")
-        about.target = self
-        menu.addItem(about)
         let quit = NSMenuItem(title: "Quit NoCaps", action: #selector(quitApp), keyEquivalent: "q")
         quit.target = self
         menu.addItem(quit)
@@ -67,15 +60,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         for name in [NSWorkspace.didWakeNotification, NSWorkspace.sessionDidBecomeActiveNotification] {
             center.addObserver(self, selector: #selector(resume), name: name, object: nil)
         }
-        permissionObservers = observePermissionChanges(
-            needsRefresh: { [weak self] in
-                guard let self else { return false }
-                return !trusted && session.isActive
-            },
-            refresh: { [weak self] in self?.refresh() }
-        )
         session.resume()
-        remapper.onAccessChanged = { [weak self] in self?.refresh(keyboardsChanged: true) }
+        remapper.onAccessChanged = { [weak self] in
+            self?.refresh(checkPermission: true, keyboardsChanged: true)
+        }
         remapper.monitorKeyboards { [weak self] in self?.refresh(keyboardsChanged: true) }
 
         do { try remapper.recoverMapping() } catch {
@@ -83,18 +71,18 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
             lastError = error.localizedDescription
             cleanupPending = true
         }
-        access = PermissionAccess(isGranted: CGPreflightPostEventAccess())
+        trusted = CGPreflightPostEventAccess()
         if !trusted {
             openPermissions()
         } else {
-            refresh(checkPermission: false)
+            refresh()
         }
         updateLoginItem()
     }
 
-    private func refresh(checkPermission: Bool = true, keyboardsChanged: Bool = false) {
+    private func refresh(checkPermission: Bool = false, keyboardsChanged: Bool = false) {
         if checkPermission {
-            access.update(CGPreflightPostEventAccess())
+            trusted = CGPreflightPostEventAccess()
         }
         secureInput = IsSecureEventInputEnabled()
         do {
@@ -102,7 +90,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                 try remapper.stop()
                 cleanupPending = false
             }
-            if enabled, trusted, !access.needsRestart, !secureInput, session.isActive {
+            if enabled, trusted, !secureInput, session.isActive {
                 if !remapper.isRunning || keyboardsChanged {
                     keyboardCount = try remapper.start()
                 }
@@ -118,8 +106,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
                     status = lastError == nil ? "Paused" : "Paused — needs attention"
                 } else if !trusted {
                     status = "Keyboard access required"
-                } else if access.needsRestart {
-                    status = "Restart NoCaps to apply keyboard access"
                 } else if secureInput {
                     status = "Paused during Secure Input"
                 } else {
@@ -131,19 +117,16 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         }
         updateMenu()
         updateSafetyTimer()
-        offerRestart()
     }
 
     private func pollSafety() {
         if cleanupPending {
-            refresh(checkPermission: false)
+            refresh()
             return
         }
-        let nextTrusted = CGPreflightPostEventAccess()
         let nextSecureInput = IsSecureEventInputEnabled()
-        if trusted != nextTrusted || secureInput != nextSecureInput {
-            access.update(nextTrusted)
-            refresh(checkPermission: false)
+        if secureInput != nextSecureInput {
+            refresh(checkPermission: !nextSecureInput)
             return
         }
         guard remapper.isRunning else { return }
@@ -155,7 +138,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     private func updateSafetyTimer() {
-        guard session.isActive, cleanupPending || (enabled && trusted && !access.needsRestart) else {
+        guard session.isActive, cleanupPending || (enabled && trusted) else {
             timer?.invalidate()
             timer = nil
             return
@@ -182,9 +165,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func updateMenu() {
         toggle.state = enabled ? .on : .off
-        permissions.isHidden = trusted && !access.needsRestart
-        permissions.title = trusted ? "Restart NoCaps…" : "Allow Keyboard Access…"
-        permissions.action = trusted ? #selector(restartNoCaps) : #selector(openPermissions)
+        permissions.isHidden = trusted
         details.isHidden = lastError == nil
         statusItem.button?.appearsDisabled = status != "Active"
         statusItem.button?.toolTip = lastError ?? "NoCaps \(version) — \(status.lowercased())"
@@ -198,7 +179,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     func menuWillOpen(_: NSMenu) {
-        refresh(keyboardsChanged: true)
+        refresh(checkPermission: true, keyboardsChanged: true)
         updateLoginItem()
     }
 
@@ -206,11 +187,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
         enabled.toggle()
         lastError = nil
         UserDefaults.standard.set(enabled, forKey: "enabled")
-        access.update(CGPreflightPostEventAccess())
+        if enabled {
+            trusted = CGPreflightPostEventAccess()
+        }
         if enabled, !trusted {
             openPermissions()
         } else {
-            refresh(checkPermission: false)
+            refresh()
         }
         if let lastError {
             showError(lastError)
@@ -218,17 +201,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     }
 
     @objc private func openPermissions() {
-        access.update(CGPreflightPostEventAccess())
-        if trusted {
-            refresh(checkPermission: false)
-            return
-        }
         NSApp.activate(ignoringOtherApps: true)
-        _ = CGRequestPostEventAccess()
-        if !AXIsProcessTrusted() {
-            let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue() as String: true] as CFDictionary
-            _ = AXIsProcessTrustedWithOptions(options)
-        }
+        trusted = CGRequestPostEventAccess()
         refresh()
         if !trusted,
             let url = URL(string: "x-apple.systempreferences:com.apple.preference.security?Privacy_Accessibility")
@@ -268,42 +242,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     @objc private func resume() {
         session.resume()
-        refresh()
-    }
-
-    @objc private func openAbout() {
-        if let url = URL(string: "https://github.com/phucisstupid/nocaps") {
-            NSWorkspace.shared.open(url)
-        }
+        refresh(checkPermission: true)
     }
 
     @objc private func quitApp() {
-        NSApp.terminate(nil)
-    }
-
-    private func offerRestart() {
-        guard access.needsRestart, trusted, session.isActive, !restartPromptShown else { return }
-        restartPromptShown = true
-        DispatchQueue.main.async { [weak self] in
-            guard let self else { return }
-            guard trusted, session.isActive else {
-                restartPromptShown = false
-                return
-            }
-            NSApp.activate(ignoringOtherApps: true)
-            let alert = NSAlert()
-            alert.messageText = "Restart NoCaps"
-            alert.informativeText = "Keyboard access has been granted. Restart NoCaps to apply it."
-            alert.addButton(withTitle: "Restart NoCaps")
-            alert.addButton(withTitle: "Later")
-            if alert.runModal() == .alertFirstButtonReturn {
-                restartNoCaps()
-            }
-        }
-    }
-
-    @objc private func restartNoCaps() {
-        restartRequested = true
         NSApp.terminate(nil)
     }
 
@@ -316,20 +258,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     func applicationShouldTerminate(_: NSApplication) -> NSApplication.TerminateReply {
         do {
             try remapper.stop()
-            if restartRequested {
-                do {
-                    try restartAppAfterExit(
-                        of: ProcessInfo.processInfo.processIdentifier, bundleURL: Bundle.main.bundleURL)
-                } catch {
-                    restartRequested = false
-                    showError("NoCaps could not restart. \(error.localizedDescription)")
-                    refresh(checkPermission: false)
-                    return .terminateCancel
-                }
-            }
             return .terminateNow
         } catch {
-            restartRequested = false
             handleError(error)
             updateMenu()
             updateSafetyTimer()
