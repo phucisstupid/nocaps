@@ -15,9 +15,7 @@ unzip it, and move NoCaps to Applications.
 Or install with Homebrew:
 
 ```sh
-brew tap phucisstupid/nocaps https://github.com/phucisstupid/nocaps
-brew trust --cask phucisstupid/nocaps/nocaps
-brew install --cask phucisstupid/nocaps/nocaps
+brew install --cask phucisstupid/tap/nocaps
 ```
 
 Release builds are not notarized, so macOS may require approval before opening.

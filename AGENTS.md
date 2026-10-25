@@ -17,7 +17,8 @@ Use AppKit, Core Graphics, IOKit, and ServiceManagement. Keep it dependency-free
 - `Tests/`: assert-based behavior, event, session, and mapping recovery checks.
 - `Info.plist`: app identity, minimum macOS, and release version.
 - `scripts/`: build, lint, and shared app/menu icon drawing.
-- `Casks/nocaps.rb`: Homebrew installation from GitHub release assets.
+- `tap_migrations.json`: redirects the former app tap to `phucisstupid/tap`.
+  The Homebrew cask lives in `phucisstupid/homebrew-tap` as `Casks/nocaps.rb`.
 
 ## Commands
 
@@ -31,7 +32,7 @@ The build runs the self-checks and creates `build/NoCaps.zip`. It saves the
 runnable bundle path in `.build/app-path`. Build bundles in a local temporary
 directory: cloud providers can add metadata that invalidates signatures.
 Use Xcode 27.0 for the native formatter and linter, matching the Actions workflow.
-The lint script also checks shell syntax, Info.plist, and the Homebrew cask.
+The lint script also checks shell syntax and Info.plist.
 
 For keyboard or permission changes, also test the installed app manually:
 tap, hold, fast chords, physical Control, pause/quit, and reconnect a keyboard.
@@ -59,6 +60,6 @@ checks formatting/lint/tests, and publishes `NoCaps.zip`. Keep the
 app version, Git tag, release asset URL, and Homebrew cask version consistent.
 Use the actual release archive's SHA-256 in the cask. Do not claim Apple
 notarization unless the workflow signs and notarizes with configured credentials.
-After Actions publishes a release, download its archive, update the cask checksum
-from that archive, and commit the cask to the default branch. A local build's
+After Actions publishes a release, download its archive, update the cask version
+and checksum in `phucisstupid/homebrew-tap`, and commit there. A local build's
 checksum is only a preview; do not publish it as the Actions artifact's checksum.
