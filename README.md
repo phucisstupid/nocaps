@@ -1,7 +1,3 @@
-[![NoCaps demo: tap for Escape, hold for Control. Click to watch with sound.](docs/nocaps.gif)](docs/nocaps.mp4)
-
-<sub>Music: [Sascha Ende](https://ende.app/en), “Happy Beats / Business Moves, Vol. 12” ([CC BY 4.0](https://ende.app/en/standard-license)); excerpted and mixed.</sub>
-
 # NoCaps
 
 A super lightweight app that does one job: make Caps Lock **tap for Escape, hold for Control**.
@@ -9,6 +5,8 @@ A super lightweight app that does one job: make Caps Lock **tap for Escape, hold
 NoCaps lives in your menu bar on macOS 13 or later, on Apple silicon and Intel
 Macs. The native Windows version lives in the notification area on Windows 10
 and 11 (x64).
+
+[![NoCaps demo: tap for Escape, hold for Control. Click to watch with sound.](docs/nocaps.gif)](docs/nocaps.mp4)
 
 ## Install on macOS
 

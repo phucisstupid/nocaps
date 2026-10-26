@@ -1,0 +1,14 @@
+Music: “Happy Beats / Business Moves, Vol. 12” by Sascha Ende, ende.app.
+License: CC BY 4.0, https://ende.app/en/standard-license
+Changes: excerpted to 21 seconds, mixed at reduced volume with fades and sound effects.
+
+Keyboard Soundpack #1 by unicae_games (CC0).
+Source: https://opengameart.org/content/keyboard-soundpack-1-typing-and-single-keystrokes
+
+Interface and impact sound effects by Kenney (CC0).
+Source: https://kenney.nl/
+
+NoCaps app icon and product copy come from this project's source.
+Keyboard and menu interactions are explanatory animations.
+
+Composition and render: Hyperframes 0.8.202, local rendering.
