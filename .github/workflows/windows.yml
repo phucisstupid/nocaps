@@ -1,0 +1,28 @@
+name: Build Windows
+
+on:
+  workflow_call:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-2025
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Build and test native Windows app
+        shell: pwsh
+        run: ./scripts/build-windows.ps1
+      - uses: actions/upload-artifact@v7
+        with:
+          name: NoCaps-Windows-x64
+          path: |
+            build/NoCaps-Windows-x64.zip
+            build/NoCaps-Windows-x64.zip.sha256
+          compression-level: 0
+          if-no-files-found: error
