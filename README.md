@@ -1,4 +1,6 @@
-<img src="docs/icon.png" alt="NoCaps app icon" width="128" height="128">
+[![NoCaps demo: tap for Escape, hold for Control. Click to watch with sound.](docs/nocaps.gif)](docs/nocaps.mp4)
+
+<sub>Music: [Sascha Ende](https://ende.app/en), “Happy Beats / Business Moves, Vol. 12” ([CC BY 4.0](https://ende.app/en/standard-license)); excerpted and mixed.</sub>
 
 # NoCaps
 
