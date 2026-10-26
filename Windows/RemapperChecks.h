@@ -34,7 +34,7 @@ void resetRemapperCheck() {
 void expectKey(const INPUT& input, WORD key, bool up) {
     assert(input.type == INPUT_KEYBOARD);
     assert(input.ki.wVk == key && input.ki.wScan == 0);
-    assert(input.ki.dwFlags == (up ? KEYEVENTF_KEYUP : 0));
+    assert(input.ki.dwFlags == static_cast<DWORD>(up ? KEYEVENTF_KEYUP : 0));
     assert(input.ki.dwExtraInfo == marker);
 }
 } // namespace
