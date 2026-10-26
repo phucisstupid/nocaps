@@ -33,9 +33,10 @@ If NoCaps crashes, reopen it to restore the key.
 
 ## Windows
 
-Download [NoCaps-Windows-x64.zip from the latest release](https://github.com/phucisstupid/nocaps/releases/latest/download/NoCaps-Windows-x64.zip),
-extract it, and open `NoCaps.exe`. Keep the executable in
-a permanent folder before enabling **Launch at Login**. There is no installer
+Download [NoCaps.exe from the latest release](https://github.com/phucisstupid/nocaps/releases/latest/download/NoCaps.exe)
+and open it. A [ZIP archive](https://github.com/phucisstupid/nocaps/releases/latest/download/NoCaps-Windows-x64.zip)
+is also available. Keep the executable in a permanent folder before enabling
+**Launch at Login**. There is no installer
 or runtime to install. Windows builds are unsigned.
 
 Turn Caps Lock off before enabling NoCaps. Tap Caps Lock for Escape, hold it for

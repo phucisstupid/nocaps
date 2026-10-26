@@ -45,9 +45,11 @@ the menu. Never report these hardware checks as passed without doing them.
 
 On Windows, run `powershell -ExecutionPolicy Bypass -File scripts/build-windows.ps1`
 with Visual Studio's C++ workload, Windows SDK, and CMake installed. The build
-runs self-checks and creates `build/NoCaps-Windows-x64.zip`. Its version comes
-from `Info.plist`. The reusable Windows Actions workflow builds and tests the
-Windows app; tagged releases publish both platform archives and checksums.
+runs self-checks and creates `build/NoCaps.exe` and `build/NoCaps-Windows-x64.zip`
+with SHA-256 checksums. Its version comes from `Info.plist`. The reusable
+Windows Actions workflow builds and tests the
+Windows app; tagged releases publish both platform archives, the standalone
+Windows executable, and checksums.
 Manually check tap, hold, fast chords, both physical Control keys, pause/quit, lock/unlock, sleep/wake, keyboard
 disconnect/reconnect, Explorer restart, and Launch at Login on Windows.
 
@@ -73,8 +75,9 @@ and signing or permission boilerplate.
 
 GitHub Actions builds the tagged release for Apple silicon, Intel Macs, and
 Windows x64, checks formatting/lint/tests, and publishes `NoCaps.zip` and
-`NoCaps-Windows-x64.zip` with SHA-256 checksums. Keep the
-app version, Git tag, release asset URL, and Homebrew cask version consistent.
+`NoCaps-Windows-x64.zip` plus the standalone `NoCaps.exe`, all with SHA-256
+checksums. Keep the app version, Git tag, release asset URL, and Homebrew cask
+version consistent.
 Use the actual release archive's SHA-256 in the cask. Do not claim Apple
 notarization unless the workflow signs and notarizes with configured credentials.
 After Actions publishes a release, download its archive, update the cask version

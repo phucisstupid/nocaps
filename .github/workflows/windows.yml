@@ -24,5 +24,7 @@ jobs:
           path: |
             build/NoCaps-Windows-x64.zip
             build/NoCaps-Windows-x64.zip.sha256
+            build/NoCaps.exe
+            build/NoCaps.exe.sha256
           compression-level: 0
           if-no-files-found: error

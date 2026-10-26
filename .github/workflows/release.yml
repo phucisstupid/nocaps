@@ -65,11 +65,12 @@ jobs:
           RELEASE_TAG: ${{ github.ref_name }}
         run: |
           cd build
-          sha256sum --check NoCaps.zip.sha256 NoCaps-Windows-x64.zip.sha256
+          sha256sum --check NoCaps.zip.sha256 NoCaps-Windows-x64.zip.sha256 NoCaps.exe.sha256
           cat > release-notes.md <<'NOTES'
           - Add a native Windows app with tap Escape, hold Control, a tray menu, and Launch at Login.
           - Add portable Windows downloads alongside the macOS app.
           NOTES
           gh release create "$RELEASE_TAG" NoCaps.zip NoCaps.zip.sha256 \
             NoCaps-Windows-x64.zip NoCaps-Windows-x64.zip.sha256 \
+            NoCaps.exe NoCaps.exe.sha256 \
             --verify-tag --title "NoCaps $RELEASE_TAG" --notes-file release-notes.md

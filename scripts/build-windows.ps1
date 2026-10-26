@@ -9,10 +9,14 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Windows self-checks failed.' }
 
     New-Item -ItemType Directory -Force build | Out-Null
+    $executable = 'build/NoCaps.exe'
+    Copy-Item .build/windows/Release/NoCaps.exe -Destination $executable -Force
     $archive = 'build/NoCaps-Windows-x64.zip'
-    Compress-Archive -Path .build/windows/Release/NoCaps.exe -DestinationPath $archive -Force
-    $checksum = (Get-FileHash -Algorithm SHA256 $archive).Hash.ToLowerInvariant()
-    "$checksum  NoCaps-Windows-x64.zip" | Set-Content "$archive.sha256" -Encoding ascii
+    Compress-Archive -Path $executable -DestinationPath $archive -Force
+    foreach ($file in @($archive, $executable)) {
+        $checksum = (Get-FileHash -Algorithm SHA256 $file).Hash.ToLowerInvariant()
+        "$checksum  $(Split-Path $file -Leaf)" | Set-Content "$file.sha256" -Encoding ascii
+    }
     Write-Output "Built $((Get-Location).Path)/$archive"
 } finally {
     Pop-Location
