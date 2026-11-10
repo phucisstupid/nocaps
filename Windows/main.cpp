@@ -13,7 +13,6 @@
 
 namespace {
 constexpr wchar_t windowClass[] = L"NoCaps.Native.Windows";
-constexpr wchar_t preferences[] = L"Software\\NoCaps";
 constexpr wchar_t loginKey[] = L"Software\\Microsoft\\Windows\\CurrentVersion\\Run";
 constexpr ULONG_PTR marker = 0x4E6F4361;
 constexpr UINT trayMessage = WM_APP + 1;
@@ -193,21 +192,6 @@ LRESULT CALLBACK keyboardHook(int code, WPARAM message, LPARAM data) {
     return CallNextHookEx(hook, code, message, data);
 }
 
-void saveEnabled() {
-    HKEY key = nullptr;
-    const DWORD value = enabled ? 1 : 0;
-    if (RegCreateKeyExW(HKEY_CURRENT_USER, preferences, 0, nullptr, 0, KEY_SET_VALUE,
-                        nullptr, &key, nullptr) == ERROR_SUCCESS) {
-        if (RegSetValueExW(key, L"WindowsEnabled", 0, REG_DWORD,
-                          reinterpret_cast<const BYTE*>(&value), sizeof(value)) != ERROR_SUCCESS) {
-            lastError = L"Could not save the enabled preference.";
-        }
-        RegCloseKey(key);
-    } else {
-        lastError = L"Could not save the enabled preference.";
-    }
-}
-
 std::wstring loginCommandLine() { return L"\"" + executable + L"\""; }
 
 bool launchesAtLogin() {
@@ -322,7 +306,6 @@ LRESULT CALLBACK windowProcedure(HWND handle, UINT message, WPARAM wParam, LPARA
             || LOWORD(lParam) == NIN_KEYSELECT) showMenu();
         return 0;
     case failureMessage:
-        saveEnabled();
         refresh();
         return 0;
     case WM_COMMAND:
@@ -330,7 +313,6 @@ LRESULT CALLBACK windowProcedure(HWND handle, UINT message, WPARAM wParam, LPARA
         case toggleCommand:
             enabled = !enabled;
             lastError = nullptr;
-            saveEnabled();
             refresh();
             break;
         case loginCommand:
@@ -432,9 +414,6 @@ int WINAPI wWinMain(HINSTANCE instance, HINSTANCE, PWSTR, int) {
         return 1;
     }
     executable = path;
-    DWORD value = 1, bytes = sizeof(value);
-    if (RegGetValueW(HKEY_CURRENT_USER, preferences, L"WindowsEnabled", RRF_RT_REG_DWORD,
-                     nullptr, &value, &bytes) == ERROR_SUCCESS) enabled = value != 0;
     LPWSTR sessionData = nullptr;
     DWORD sessionBytes = 0;
     sessionActive = WTSQuerySessionInformationW(WTS_CURRENT_SERVER_HANDLE, WTS_CURRENT_SESSION,

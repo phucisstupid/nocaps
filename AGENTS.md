@@ -69,6 +69,23 @@ disconnect/reconnect, Explorer restart, and Launch at Login on Windows.
 
 ## Release
 
+macOS releases use the persistent self-signed certificate in `signing/NoCaps.pem`.
+This provides a stable identity without an Apple Developer Program account; it
+does not provide Apple-verified publisher identity or notarization. Keep the same
+certificate and private key across releases. Recreating a certificate with the
+same name changes its identity and requires users to grant keyboard access again.
+Only the public certificate belongs in Git. Keep the private key in the owner's
+login keychain and an encrypted backup.
+
+Configure repository Actions secrets `NOCAPS_SIGNING_P12` (Base64-encoded PKCS#12
+certificate and private key) and `NOCAPS_SIGNING_PASSWORD` (its export password).
+Tagged builds import the key into a temporary keychain and delete it afterward;
+pull requests never receive it. `bash scripts/build.sh --universal --release`
+requires this exact identity and refuses ad hoc signing. Local builds use it when
+available; `NOCAPS_SIGNING_KEYCHAIN` can select its keychain. Otherwise, development
+builds use ad hoc signing and warn that installing them can invalidate permission.
+Run `bash Tests/SigningChecks.sh` to check the release signing safeguards.
+
 Release notes contain only a bullet list of changes in that release. Omit
 headings, app descriptions, installation instructions, compatibility details,
 and signing or permission boilerplate.

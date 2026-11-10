@@ -28,7 +28,13 @@ Open NoCaps and allow keyboard access in **System Settings → Privacy & Securit
 Turn Caps Lock off if its light is on. After granting access, quit and reopen NoCaps
 once. Later launches use the saved permission.
 
-Use the menu to pause NoCaps or enable **Launch at Login**. Quit to restore Caps Lock.
+If macOS asks for access after updating from an earlier release, quit NoCaps,
+remove its old entry in Accessibility settings, add the updated app, then
+enable access and reopen it.
+
+NoCaps enables remapping when it opens and has keyboard access. Use the menu
+to pause remapping for the current run or enable **Launch at Login**. Quit to
+restore Caps Lock.
 If NoCaps crashes, reopen it to restore the key.
 
 ## Windows
@@ -39,9 +45,10 @@ is also available. Keep the executable in a permanent folder before enabling
 **Launch at Login**. There is no installer
 or runtime to install. Windows builds are unsigned.
 
-Turn Caps Lock off before enabling NoCaps. Tap Caps Lock for Escape, hold it for
-180 ms for Control, or press another key while holding it for an immediate
-Control chord. Right-click the notification icon to pause, enable **Launch at
+Turn Caps Lock off before opening NoCaps. Remapping starts automatically when
+NoCaps opens. Tap Caps Lock for Escape, hold it for 180 ms for Control, or press
+another key while holding it for an immediate Control chord. Right-click the
+notification icon to pause remapping for the current run, enable **Launch at
 Login**, or quit. Pausing and quitting restore normal Caps Lock behavior.
 
 The app uses a Windows keyboard hook without changing system keyboard mappings.

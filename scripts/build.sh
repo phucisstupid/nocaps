@@ -4,11 +4,35 @@ cd "$(dirname "$0")/.."
 mkdir -p .build/ModuleCache build
 architecture="$(uname -m)"
 architectures=("$architecture")
-if [[ $# -gt 1 || ( $# -eq 1 && "$1" != "--universal" ) ]]; then
-    printf 'Usage: %s [--universal]\n' "$0" >&2
-    exit 2
+release=false
+for argument in "$@"; do
+    case "$argument" in
+        --universal) architectures=(arm64 x86_64) ;;
+        --release) release=true ;;
+        *) printf 'Usage: %s [--universal] [--release]\n' "$0" >&2; exit 2 ;;
+    esac
+done
+nocaps_identity="$(openssl x509 -in signing/NoCaps.pem -noout -fingerprint -sha1 | cut -d= -f2 | tr -d :)"
+nocaps_find_identity=(security find-identity -p codesigning)
+nocaps_signing_options=(--timestamp=none)
+if [[ -n "${NOCAPS_SIGNING_KEYCHAIN:-}" ]]; then
+    nocaps_find_identity+=("$NOCAPS_SIGNING_KEYCHAIN")
+    nocaps_signing_options+=(--keychain "$NOCAPS_SIGNING_KEYCHAIN")
 fi
-if [[ "${1:-}" == "--universal" ]]; then architectures=(arm64 x86_64); fi
+# Untrusted self-signed identities still provide stable identity; -v would omit them.
+if [[ "${CI:-false}" == true && "$release" == false ]]; then
+    nocaps_identity="-"
+elif ! "${nocaps_find_identity[@]}" |
+    awk -v identity="$nocaps_identity" '$2 == identity { found = 1 } END { exit !found }'; then
+    if [[ "$release" == true ]]; then
+        printf 'Release signing identity unavailable. Import the original NoCaps certificate and private key; refusing an ad hoc release.\n' >&2
+        exit 1
+    fi
+    nocaps_identity="-"
+fi
+if [[ "$nocaps_identity" == "-" ]]; then
+    printf 'Using ad hoc signing for this development build. Replacing the installed app may require granting keyboard access again.\n' >&2
+fi
 compiler=(xcrun swiftc -swift-version 5 -module-cache-path .build/ModuleCache)
 "${compiler[@]}" -target "${architecture}-apple-macosx13.0" Sources/KeyBehavior.swift Sources/KeyboardMapping.swift Sources/KeyRemapper.swift Sources/SessionState.swift Tests/*.swift -o .build/NoCapsChecks
 .build/NoCapsChecks
@@ -32,17 +56,12 @@ cp Info.plist "$app_bundle/Contents/Info.plist"
 iconutil -c icns "$staging_dir/NoCaps.iconset" -o "$app_bundle/Contents/Resources/NoCaps.icns"
 cp "$staging_dir/NoCaps.iconset/icon_512x512@2x.png" build/NoCaps.png
 plutil -lint "$app_bundle/Contents/Info.plist"
-if [[ "${CI:-false}" == "true" ]]; then
-    # shortcut: CI uses ad hoc signing; add Developer ID and notarization for trusted distribution.
-    nocaps_signing_identity="-"
-else
-    nocaps_signing_identity="$(security find-identity -v -p codesigning | awk '/"(Apple Development|Mac Developer|Developer ID Application):/ {print $2; exit}')"
-    if [[ -z "$nocaps_signing_identity" ]]; then
-        printf 'No signing certificate available; using ad hoc signing. Keyboard access may need to be granted again after rebuilding.\n' >&2
-    fi
+codesign --force --sign "$nocaps_identity" --identifier app.nocaps.NoCaps "${nocaps_signing_options[@]}" "$app_bundle"
+codesign --verify --strict --all-architectures "$app_bundle"
+if [[ "$nocaps_identity" != "-" ]]; then
+    codesign --verify --strict --all-architectures \
+        -R="identifier \"app.nocaps.NoCaps\" and certificate leaf = H\"$nocaps_identity\"" "$app_bundle"
 fi
-codesign --force --sign "${nocaps_signing_identity:--}" --identifier app.nocaps.NoCaps "$app_bundle"
-codesign --verify --strict "$app_bundle"
 ditto -c -k --keepParent --norsrc --noextattr "$app_bundle" build/NoCaps.zip
 (cd build && shasum -a 256 NoCaps.zip > NoCaps.zip.sha256)
 printf '%s\n' "$app_bundle" > .build/app-path

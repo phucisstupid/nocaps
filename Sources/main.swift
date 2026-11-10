@@ -26,7 +26,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     private var secureInput = false
     private var cleanupPending = false
     private var keyboardCount = 0
-    private var enabled = UserDefaults.standard.object(forKey: "enabled") as? Bool ?? true
+    private var enabled = true
     private var lastError: String?
 
     func applicationDidFinishLaunching(_: Notification) {
@@ -152,7 +152,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
 
     private func handleError(_ error: Error) {
         enabled = false
-        UserDefaults.standard.set(false, forKey: "enabled")
         lastError = error.localizedDescription
         status = "Paused — needs attention"
         cleanupPending = true
@@ -186,7 +185,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate {
     @objc private func toggleEnabled() {
         enabled.toggle()
         lastError = nil
-        UserDefaults.standard.set(enabled, forKey: "enabled")
         if enabled {
             trusted = CGPreflightPostEventAccess()
         }
